@@ -25,8 +25,8 @@ type ResultType = {
 const WAIT_FOR_HMR = 90 * 1000;
 
 const cwd = pathJoin(__dirname, '__fixtures/hmr');
-const rel = (relPath: string) => pathJoin(cwd, relPath);
-const read = (relPath: string) => readFile(rel(relPath));
+const abs = (relPath: string) => pathJoin(cwd, relPath);
+const read = (relPath: string) => readFile(abs(relPath));
 const spawn = (
   command: string,
   args: string[],
@@ -74,7 +74,7 @@ describe('HMR', () => {
 
   beforeEach(async () => {
     await restoreFixtures();
-    await rimraf(rel('__generated__'));
+    await rimraf(abs('__generated__'));
     await spawn('node', ['../../../bin/graphql-let.js']);
   });
   afterEach(async () => {
@@ -89,32 +89,8 @@ describe('HMR', () => {
        * Ensure the command result
        */
       const result1 = await ensureOutputDts('Ensure the initial state');
-      ok(
-        result1.schema.includes(
-          `
-export declare type User = {
-    __typename?: 'User';
-    id: Scalars['ID'];
-    name: Scalars['String'];
-    status: Scalars['String'];
-};
-`,
-        ),
-        `"${result1.schema}" is something wrong`,
-      );
-      ok(
-        result1.document.includes(
-          `
-export declare type User = {
-    __typename?: 'User';
-    id: Scalars['ID'];
-    name: Scalars['String'];
-    status: Scalars['String'];
-};
-`,
-        ),
-        `${result1.document} is something wrong`,
-      );
+      expect(result1.schema).toMatchSnapshot();
+      expect(result1.document).toMatchSnapshot();
 
       /************************************************************************
        * Start dev server
@@ -155,7 +131,7 @@ export declare type User = {
        */
       await timeout(3 * 1000);
       await writeFile(
-        rel('src/viewer.graphql'),
+        abs('src/viewer.graphql'),
         `
 # Add "status" field for testing
 query Viewer {
@@ -191,30 +167,19 @@ query Viewer {
             result1.document,
             'Document should be renewed.',
           );
-          ok(
-            result3.document.includes(
-              `
-export declare type ViewerQuery = ({
-    __typename?: 'Query';
-} & {
-    viewer?: Maybe<({
-        __typename?: 'User';
-    } & Pick<User, 'id' | 'name' | 'status'>)>;
-});
-`,
-            ),
-          );
         },
         1000,
         WAIT_FOR_HMR,
       );
+      expect(result3!.schema).toMatchSnapshot();
+      expect(result3!.document).toMatchSnapshot();
 
       /************************************************************************
        * Verify HMR on schema modification - add "age" field
        */
       await timeout(3 * 1000);
       await writeFile(
-        rel('src/type-defs.graphqls'),
+        abs('src/type-defs.graphqls'),
         `
 # Add "age" field for testing
 type User {
@@ -232,9 +197,10 @@ type Query {
       );
       await timeout(3 * 1000);
 
+      let result4: ResultType;
       await retryable(
         async () => {
-          const result4 = await ensureOutputDts(
+          result4 = await ensureOutputDts(
             'Verify HMR on schema modification - add "age" field',
           );
           notStrictEqual(
@@ -247,36 +213,12 @@ type Query {
             result3.document,
             'Document should be renewed.',
           );
-          ok(
-            result4.schema.includes(
-              `
-export declare type User = {
-    __typename?: 'User';
-    id: Scalars['ID'];
-    name: Scalars['String'];
-    status: Scalars['String'];
-    age: Scalars['Int'];
-};
-`,
-            ),
-          );
-          ok(
-            result4.document.includes(
-              `
-export declare type User = {
-    __typename?: 'User';
-    id: Scalars['ID'];
-    name: Scalars['String'];
-    status: Scalars['String'];
-    age: Scalars['Int'];
-};
-`,
-            ),
-          );
         },
         1000,
         WAIT_FOR_HMR,
       );
+      expect(result4!.schema).toMatchSnapshot();
+      expect(result4!.document).toMatchSnapshot();
     },
     5 * 60 * 1000,
   );
@@ -285,6 +227,7 @@ export declare type User = {
     'should recover after GraphQL Error properly',
     async () => {
       let stderrContent = '';
+      const result1 = await ensureOutputDts('');
 
       /************************************************************************
        * Start dev server
@@ -302,7 +245,7 @@ export declare type User = {
 
       await timeout(3 * 1000);
       await writeFile(
-        rel('src/type-defs.graphqls'),
+        abs('src/type-defs.graphqls'),
         `
 type User {
     id: ID!
@@ -320,10 +263,8 @@ type Query {
 
       await retryable(
         async () => {
-          ok(
-            stderrContent.includes(
-              'GraphQLDocumentError: Cannot query field "name" on type "User".',
-            ),
+          expect(stderrContent).toMatch(
+            'GraphQLDocumentError: Cannot query field "name" on type "User".',
           );
           const globResults = await glob('__generated__/types/**', { cwd });
           strictEqual(globResults.length, 0);
@@ -339,7 +280,7 @@ type Query {
 
       await timeout(3 * 1000);
       await writeFile(
-        rel('src/type-defs.graphqls'),
+        abs('src/type-defs.graphqls'),
         `
 type User {
     id: ID!
@@ -355,40 +296,18 @@ type Query {
       );
       await timeout(3 * 1000);
 
+      let result2: ResultType;
       await retryable(
         async () => {
-          const result = await ensureOutputDts('');
-          ok(
-            result.schema.includes(
-              `
-export declare type User = {
-    __typename?: 'User';
-    id: Scalars['ID'];
-    name: Scalars['String'];
-    status: Scalars['String'];
-};
-`,
-            ),
-            `"${result.schema}" is something wrong`,
-          );
-          ok(
-            result.document.includes(
-              `
-export declare type ViewerQuery = ({
-    __typename?: 'Query';
-} & {
-    viewer?: Maybe<({
-        __typename?: 'User';
-    } & Pick<User, 'id' | 'name'>)>;
-});
-`,
-            ),
-            `${result.document} is something wrong`,
-          );
+          result2 = await ensureOutputDts('');
+          expect(result1.schema).not.toEqual(result2.schema);
+          expect(result1.document).not.toEqual(result2.document);
         },
         1000,
         30 * 1000,
       );
+      expect(result2!.schema).toMatchSnapshot();
+      expect(result2!.document).toMatchSnapshot();
     },
     5 * 60 * 1000,
   );
