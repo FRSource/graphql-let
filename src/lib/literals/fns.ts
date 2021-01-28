@@ -50,7 +50,7 @@ export function createPaths(
 
 export const parserOption: ParserOptions = {
   sourceType: 'module',
-  plugins: ['typescript', 'jsx'],
+  plugins: ['typescript', 'jsx', 'classProperties'],
 };
 
 export function appendExportAsObject(dtsContent: string) {

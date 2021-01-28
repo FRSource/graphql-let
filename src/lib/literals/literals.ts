@@ -163,7 +163,7 @@ export async function processLiteralsForContext(
   if (!sourceRelPaths.length) return;
 
   const { cwd } = execContext;
-  const babelOptions = await loadOptions({ cwd });
+  const babelOptions = await loadOptions({ cwd, filename: '' });
   const {
     // configFilePath,
     importName = 'graphql-let',
