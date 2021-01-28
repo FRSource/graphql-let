@@ -1,9 +1,0 @@
-schema: lib/type-defs.graphqls
-documents: "**/*.graphql"
-plugins:
-    - typescript
-respectGitIgnore: true
-config:
-    mappers:
-        User: lib/user#User
-cacheDir: __generated__

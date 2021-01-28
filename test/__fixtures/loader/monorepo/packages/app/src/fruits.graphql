@@ -1,7 +1,0 @@
-query GetFruits {
-    fruits {
-        id
-        name
-        flavor
-    }
-}

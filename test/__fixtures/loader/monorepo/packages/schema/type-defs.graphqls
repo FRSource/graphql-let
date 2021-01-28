@@ -1,9 +1,0 @@
-type Fruit {
-    id: ID!
-    name: String!
-    flavor: Float!
-}
-
-type Query {
-    fruits: [Fruit]
-}

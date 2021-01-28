@@ -17,7 +17,11 @@ graphql-let.iml
 
 # Misc
 .DS_Store
-dist
+src
+schema
+resource
+test
+typings
 *.tgz
 a.js
 
